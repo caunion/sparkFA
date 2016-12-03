@@ -666,7 +666,8 @@ public class SparkPCA implements Serializable {
 	 }	
 	 private static void printLogMessage(String argName )
 	 {
-		log.error("Missing arguments -D" + argName);
-		log.info("Usage: -Di=<path/to/input/matrix> -Do=<path/to/outputfolder> -Drows=<number of rows> -Dcols=<number of columns> -Dpcs=<number of principal components> [-DerrSampleRate=<Error sampling rate>] [-DmaxIter=<max iterations>] [-DoutFmt=<output format>] [-DComputeProjectedMatrix=<0/1 (compute projected matrix or not)>]"); 
+		 log.error("Missing arguments -D" + argName);
+		 log.info("Usage: -i=<path/to/input/matrix> -o=<path/to/outputfolder> -rows=<number of rows> -cols=<number of columns> -pcs=<number of principal components> [-errSampleRate=<Error sampling rate>] [-maxIter=<max iterations>] [-outFmt=<output format>] [-ComputeProjectedMatrix=<0/1 (compute projected matrix or not)>]");
+		 log.info("Example: spark-submit --class \"org.qcri.sparkpca.SparkPCA\" --master local target/sparkPCA-1.0.jar -i input/seqfiles -o output -rows 7 -cols 5 -pcs 3 -errSampleRate 1");
 	 }
 }
