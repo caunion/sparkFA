@@ -1,3 +1,4 @@
+#!/usr/bin/env bash
 # Before running this script you should set the enviroment variable SPARK_HOME (e.g. export SPARK_HOME=/path/to/spark_home_dirrectory)
 # Usage:
 # ./bin/spark-submit \
@@ -21,14 +22,14 @@
 # 	[<output format>] (optional): One of three supported output formats (DENSE/COO/LIL), the default is DENSE. See Section Output Format for more details.
 # 	[<0/1 (compute projected matrix or not)>] (optional):  0 or 1 value that specifies whether the user wants to project the input matrix on the principal components or not. 1 means that the projected matrix will be computed, and 0 means it will not be computed. The projected matrix is written in the output folder specified  by `-DOutput`
 
-if [  $# -lt 1 ] 
-	then 
-		echo -e "\nUsage:\n$0 <master_url> \n" 
+if [  $# -lt 1 ]
+	then
+		echo -e "\nUsage:\n$0 <master_url> \n"
 		exit 1
-	fi 
+	fi
  
 master_url=$1  #master url has two options (local, spark://<IP>:7077) 
 SCRIPT=$(readlink -f $0) # Absolute path to this script.
 SCRIPTPATH=`dirname $SCRIPT` # Absolute path this script is in. /home/user/bin
-#$SPARK_HOME/bin/spark-submit --class org.qcri.sparkpca.SparkPCA --master $master_url --driver-java-options "-Di=$SCRIPTPATH/input/seqfiles -Do=$SCRIPTPATH/output -Drows=7 -Dcols=5 -Dpcs=3 -DerrSampleRate=1 -DmaxIter=3" $SCRIPTPATH/target/sparkPCA-1.0.jar 
-$SPARK_HOME/bin/spark-submit --class org.qcri.sparkpca.SparkPCA --master $master_url target/sparkPCA-1.0.jar -i input/data_sig -o output -rows 1000 -cols 7 -pcs 3 -errSampleRate 1 -maxIter=200
+$SPARK_HOME/bin/spark-submit --class org.qcri.sparkpca.FileFormat --master $master_url --driver-java-options "-DInput=input/data_diff_hard.txt -DOutput=input/data_diff_hard -DInputFmt=DENSE -DCardinality=10" target/sparkPCA-1.0.jar
+#$SPARK_HOME/bin/spark-submit --class org.qcri.sparkpca.FileFormat --master $master_url target/sparkPCA-1.0.jar -i input/data_diff_sig -o input/simdataseq

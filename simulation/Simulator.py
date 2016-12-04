@@ -83,13 +83,19 @@ def pca(data, dim):
 
 
 def simulate():
-    shape =[60, 30]
+    shape =[1000, 7]
     n, d= shape
-    rank = 8
+    rank = 3
     data_pure, low_pure, noise_pure = gen(shape, rank, noise_type=0)
     data_sig, low_sig, noise_sig = gen(shape, rank, noise_type=1)
     data_diff, low_diff, noise_diff= gen(shape, rank, noise_type=2)
     data_diff2, low_diff2, noise_diff2 = gen(shape, rank, noise_type=3)
+
+    np.savetxt("data_pure.txt", data_pure)
+    np.savetxt("data_sig.txt", data_sig)
+    np.savetxt("data_diff_easy.txt", data_diff)
+    np.savetxt("data_diff_hard.txt", data_diff2)
+
 
     var_pure= pca(data_pure, rank)
     var_sig = pca(data_sig, rank)
