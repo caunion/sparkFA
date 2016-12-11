@@ -29,12 +29,13 @@ def one_pass(sample_number):
         cell_result = np.subtract(cell_result, mean)
         cell_result = np.ndarray.flatten(cell_result)
         table.append(cell_result)
-    table = np.array(table)
+    table = np.transpose(np.array(table))
 
     np.savetxt("noise"+str(sample_number)+".txt", table, delimiter=' ')
+    print table.shape
 
 # Running the program five times on one sample_size and output the running time
-for i in range(5):
+for i in range(1):
     time = datetime.now()
     one_pass(6000)
     print str(datetime.now()-time)
