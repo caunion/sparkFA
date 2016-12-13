@@ -28,8 +28,10 @@ if [  $# -lt 1 ]
 		exit 1
 	fi
  
-master_url=$1  #master url has two options (local, spark://<IP>:7077) 
+#master_url=$1  #master url has two options (local, spark://<IP>:7077) 
+master_url="local"
+file=$1
 SCRIPT=$(readlink -f $0) # Absolute path to this script.
 SCRIPTPATH=`dirname $SCRIPT` # Absolute path this script is in. /home/user/bin
-$SPARK_HOME/bin/spark-submit --class org.qcri.sparkpca.FileFormat --master $master_url --driver-java-options "-DInput=input/noise100.txt -DOutput=input/noise100 -DInputFmt=DENSE -DCardinality=100" target/sparkPCA-1.0.jar
+$SPARK_HOME/bin/spark-submit --class org.qcri.sparkpca.FileFormat --master $master_url --driver-java-options "-DInput=input/$file.txt -DOutput=input/$file -DInputFmt=DENSE -DCardinality=10" target/sparkPCA-1.0.jar
 #$SPARK_HOME/bin/spark-submit --class org.qcri.sparkpca.FileFormat --master $master_url target/sparkPCA-1.0.jar -i input/data_diff_sig -o input/simdataseq
