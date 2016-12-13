@@ -1,8 +1,8 @@
 import numpy as np
 import matplotlib
 import matplotlib.pyplot as plt
-from sklearn.decomposition import FactorAnalysis
 from PPCA import PPCA
+
 
 def data2cov(data):
     [n, d] = data.shape
@@ -81,6 +81,12 @@ def pca(data, dim):
     variablity = np.sum(s[range(dim)]) / np.sum(s)
     return variablity
 
+def generate_big_data():
+    shape =[50000, 250]
+    rank = 20
+    big_data, low_diff, noise_diff = gen(shape, rank, noise_type=2)
+    np.savetxt("big_data.txt", big_data, fmt='%.6e')
+
 
 def simulate():
     shape =[1000, 7]
@@ -118,8 +124,6 @@ def simulate():
     ppca= PPCA(data_diff2)
     ppca.fit(d=d, verbose=True)
     var_diff2_ppca =np.sum(abs(ppca.eig_vals[range(rank)]))/ np.sum(abs(ppca.eig_vals))
-
-    fa = FactorAnalysis()
 
     var_pca = [var_pure, var_sig, var_diff, var_diff2]
     var_ppca = [var_pure_ppca, var_sig_ppca, var_diff_ppca, var_diff2_ppca]
@@ -193,14 +197,48 @@ def gen_classification(shape, n_rank=3, n_classes=4, noise_type = 0):
 
     return X_noise, init_acc, X, y
 
+def test_spark():
+    acc_pure = classify_spark("sFA_pure")
+    acc_sig = classify_spark("sFA_sig")
+    acc_lit = classify_spark("sFA_lit")
+    acc_hvy = classify_spark("sFA_hvy")
+    print "acc_pure %.4f" % acc_pure
+    print "acc_sig %.4f" % acc_sig
+    print "acc_lit %.4f" % acc_lit
+    print "acc_hvy %.4f" % acc_hvy
 
-def classification_sim():
+
+def classify_spark(filename):
+    from sklearn.svm import SVC
+    from sklearn.decomposition import PCA, FactorAnalysis
+    dat = []
     shape = [1000, 10]
     n_rank = 3
     n_class = 5
     C = 2
-    X_pure, _, _,_ = gen_classification(shape=shape, n_rank=n_rank, n_classes=n_class, noise_type = 0)
-    X_sig, _, _, _ = gen_classification(shape=shape, n_rank=n_rank, n_classes=n_class, noise_type = 1)
+    _, _, _, y = gen_classification(shape=shape, n_rank=n_rank, n_classes=n_class, noise_type=0)
+    with open(filename, 'r') as fid:
+        for line in fid:
+            # (3,[0,1,2],[13.189030062353968,-5.643637749994938,2.386189980608596])
+            arr = line.split('[')[-1]
+            arr = arr.strip(")([]\r\n")
+            dat.append([float(seg) for seg in arr.split(',')])
+    X = np.array(dat)
+    clf = SVC(C=C)
+    clf.fit(X, y)
+    acc = clf.score(X, y)
+    return acc
+
+
+def classification_sim():
+    from sklearn.svm import SVC
+    from sklearn.decomposition import PCA, FactorAnalysis
+    shape = [10000, 500]
+    n_rank = 10
+    n_class = 5
+    C = 2
+    X_pure, _, _,y0 = gen_classification(shape=shape, n_rank=n_rank, n_classes=n_class, noise_type = 0)
+    X_sig, _, _, y1 = gen_classification(shape=shape, n_rank=n_rank, n_classes=n_class, noise_type = 1)
     X_lit, _, _, _ = gen_classification(shape=shape, n_rank=n_rank, n_classes=n_class, noise_type = 2)
     X_hvy, init_acc, X, y = gen_classification(shape=shape, n_rank=n_rank, n_classes=n_class, noise_type=2)
 
@@ -208,9 +246,6 @@ def classification_sim():
     np.savetxt("X_sig.txt", X_sig)
     np.savetxt("X_lit.txt", X_lit)
     np.savetxt("X_hvy.txt", X_hvy)
-
-    from sklearn.svm import SVC
-    from sklearn.decomposition import PCA, FactorAnalysis
 
     pca = PCA(n_components=n_rank)
     pca.fit(X_pure)
@@ -354,4 +389,4 @@ def main():
     plt.show()
 
 if __name__ == "__main__":
-    classification_sim()
+    test_spark()
