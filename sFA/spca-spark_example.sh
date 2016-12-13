@@ -1,3 +1,4 @@
+#!/usr/bin/env bash
 # Before running this script you should set the enviroment variable SPARK_HOME (e.g. export SPARK_HOME=/path/to/spark_home_dirrectory)
 # Usage:
 # ./bin/spark-submit \
@@ -31,6 +32,6 @@ master_url=$1  #master url has two options (local, spark://<IP>:7077)
 SCRIPT=$(readlink -f $0) # Absolute path to this script.
 SCRIPTPATH=`dirname $SCRIPT` # Absolute path this script is in. /home/user/bin
 
-#$SPARK_HOME/bin/spark-submit --class org.qcri.sparkpca.SparkPCA --master $master_url --driver-java-options "-Di=$SCRIPTPATH/input/FATest_small.txt.seq -Do=$SCRIPTPATH/output -Drows=7 -Dcols=5 -Dpcs=3 -DerrSampleRate=1 -DmaxIter=3 -DComputeProjectedMatrix 1" $SCRIPTPATH/target/sparkPCA-1.0.jar 
-$SPARK_HOME/bin/spark-submit --class org.qcri.sparkpca.SparkPCA --master $master_url target/sparkPCA-1.0.jar -i input/FATest_small.txt.seq -o output -rows 7 -cols 5 -pcs 3 -errSampleRate 1
+#$SPARK_HOME/bin/spark-submit --class org.qcri.sparkpca.SparkPCA --master $master_url --driver-java-options "-Di=$SCRIPTPATH/input/seqfiles -Do=$SCRIPTPATH/output -Drows=7 -Dcols=5 -Dpcs=3 -DerrSampleRate=1 -DmaxIter=3" $SCRIPTPATH/target/sparkPCA-1.0.jar 
+$SPARK_HOME/bin/spark-submit --class org.qcri.sparkpca.SparkPCA --master $master_url target/sparkPCA-1.0.jar -i ./input/FATest_small.txt.seq -o output -rows 7 -cols 5 -pcs 3 -errSampleRate 1 -computeProjectedMatrix 1 -maxIter 20
 

@@ -1,8 +1,8 @@
 import numpy as np
 import matplotlib
 import matplotlib.pyplot as plt
-from sklearn.decomposition import FactorAnalysis
 from PPCA import PPCA
+
 
 def data2cov(data):
     [n, d] = data.shape
@@ -81,6 +81,12 @@ def pca(data, dim):
     variablity = np.sum(s[range(dim)]) / np.sum(s)
     return variablity
 
+def generate_big_data():
+    shape =[50000, 250]
+    rank = 20
+    big_data, low_diff, noise_diff = gen(shape, rank, noise_type=2)
+    np.savetxt("big_data.txt", big_data, fmt='%.6e')
+
 
 def simulate():
     shape =[1000, 7]
@@ -119,14 +125,12 @@ def simulate():
     ppca.fit(d=d, verbose=True)
     var_diff2_ppca =np.sum(abs(ppca.eig_vals[range(rank)]))/ np.sum(abs(ppca.eig_vals))
 
-    fa = FactorAnalysis()
-
     var_pca = [var_pure, var_sig, var_diff, var_diff2]
     var_ppca = [var_pure_ppca, var_sig_ppca, var_diff_ppca, var_diff2_ppca]
     return var_pca, var_ppca
 
 
-def classification_sim(shape = [200, 10], n_rank=3, n_classes=4, noise_type = 0):
+def gen_classification(shape, n_rank=3, n_classes=4, noise_type = 0):
     from sklearn.datasets import make_classification
     from mpl_toolkits.mplot3d import Axes3D
     from sklearn.utils import shuffle
@@ -134,7 +138,14 @@ def classification_sim(shape = [200, 10], n_rank=3, n_classes=4, noise_type = 0)
     from sklearn.svm import SVC
     n_sample, n_dim = shape
     colors = ['r','g','b','y']
-    X, y = make_classification(n_samples=n_sample,n_features=n_rank, n_repeated=0, n_redundant=0,n_clusters_per_class=1, n_informative=n_rank, n_classes=n_classes, random_state=1)
+    X, y = make_classification(n_samples=n_sample,
+                               n_features=n_rank,
+                               n_repeated=0,
+                               n_redundant=0,
+                               n_clusters_per_class=1,
+                               n_informative=n_rank,
+                               n_classes=n_classes,
+                               random_state=1)
     # fig = plt.figure()
     # ax =fig.add_subplot(111, projection='3d')
     # # ax =fig.add_subplot(111)
@@ -153,22 +164,192 @@ def classification_sim(shape = [200, 10], n_rank=3, n_classes=4, noise_type = 0)
     clf.fit(X, y)
     init_acc = clf.score(X, y)
 
-    noise = np.zeros([1, n_dim])
-    for i in range(n_sample):
-        pass
+    transform = np.random.rand(n_rank, n_dim)
+
+    X_high = X.dot(transform)
+    mag = np.std(X_high, 0)
+
+
+    if noise_type == 0:
+        sigma = 0 # no noise
     if noise_type == 1:
+        a = 0.1 * mag.mean()
+        b = 0.3 * mag.mean()
         sigma = np.random.rand()
-        noise = np.random.randn([1, n_dim]) * sigma
     if noise_type == 2:
-        sigma = np.random.rand([1, n_dim])
-        noise = np.random.randn([1, n_dim]) * sigma
+        a = 0.1 * mag
+        b = 0.3 * mag
+        sigma = np.random.rand(1, n_dim) * (b - a) + a
     if noise_type == 3:
-        sigma = np.random.rand([1, n_dim]) * sigma
+        a = 0.5 * mag
+        b = 1.0 * mag
+        sigma = np.random.rand(1, n_dim) * (b - a) + a
+
+    mu = np.tile(np.random.randn(1, n_dim), [n_sample, 1])
+
+    # noise = np.tile(np.random.randn(1, n_dim) * sigma, [n_sample, 1])
+
+    noise = np.zeros([n_sample, n_dim])
+    for i in range(n_sample):
+        noise[i, :] = np.random.randn(1, n_dim) * sigma
+
+    X_noise = X_high + noise + mu
+
+    return X_noise, init_acc, X, y
+
+def test_spark():
+    acc_pure = classify_spark("sFA_pure")
+    acc_sig = classify_spark("sFA_sig")
+    acc_lit = classify_spark("sFA_lit")
+    acc_hvy = classify_spark("sFA_hvy")
+    print "acc_pure %.4f" % acc_pure
+    print "acc_sig %.4f" % acc_sig
+    print "acc_lit %.4f" % acc_lit
+    print "acc_hvy %.4f" % acc_hvy
+
+
+def classify_spark(filename):
+    from sklearn.svm import SVC
+    from sklearn.decomposition import PCA, FactorAnalysis
+    dat = []
+    shape = [1000, 10]
+    n_rank = 3
+    n_class = 5
+    C = 2
+    _, _, _, y = gen_classification(shape=shape, n_rank=n_rank, n_classes=n_class, noise_type=0)
+    with open(filename, 'r') as fid:
+        for line in fid:
+            # (3,[0,1,2],[13.189030062353968,-5.643637749994938,2.386189980608596])
+            arr = line.split('[')[-1]
+            arr = arr.strip(")([]\r\n")
+            dat.append([float(seg) for seg in arr.split(',')])
+    X = np.array(dat)
+    clf = SVC(C=C)
+    clf.fit(X, y)
+    acc = clf.score(X, y)
+    return acc
+
+
+def classification_sim():
+    from sklearn.svm import SVC
+    from sklearn.decomposition import PCA, FactorAnalysis
+    shape = [10000, 500]
+    n_rank = 10
+    n_class = 5
+    C = 2
+    X_pure, _, _,y0 = gen_classification(shape=shape, n_rank=n_rank, n_classes=n_class, noise_type = 0)
+    X_sig, _, _, y1 = gen_classification(shape=shape, n_rank=n_rank, n_classes=n_class, noise_type = 1)
+    X_lit, _, _, _ = gen_classification(shape=shape, n_rank=n_rank, n_classes=n_class, noise_type = 2)
+    X_hvy, init_acc, X, y = gen_classification(shape=shape, n_rank=n_rank, n_classes=n_class, noise_type=2)
+
+    np.savetxt("X_pure.txt", X_pure)
+    np.savetxt("X_sig.txt", X_sig)
+    np.savetxt("X_lit.txt", X_lit)
+    np.savetxt("X_hvy.txt", X_hvy)
+
+    pca = PCA(n_components=n_rank)
+    pca.fit(X_pure)
+    X_low = pca.transform(X_pure)
+    clf = SVC(C=C)
+    clf.fit(X_low, y)
+    acc_pure_pca = clf.score(X_low, y)
+    print "acc_pure_pca: %.4f" % acc_pure_pca
+
+    pca = PCA(n_components=n_rank)
+    pca.fit(X_sig)
+    X_low = pca.transform(X_sig)
+    clf = SVC(C=C, kernel='linear')
+    clf.fit(X_low, y)
+    acc_sig_pca = clf.score(X_low, y)
+    print "acc_sig_pca: %.4f" % acc_sig_pca
+
+    pca = PCA(n_components=n_rank)
+    pca.fit(X_lit)
+    X_low = pca.transform(X_lit)
+    clf = SVC(C=C, kernel='linear')
+    clf.fit(X_low, y)
+    acc_lit_pca = clf.score(X_low, y)
+    print "acc_lit_pca: %.4f" % acc_lit_pca
+
+    pca = PCA(n_components=n_rank)
+    pca.fit(X_hvy)
+    X_low = pca.transform(X_hvy)
+    clf = SVC(C=C, kernel='linear')
+    clf.fit(X_low, y)
+    acc_hvy_pca = clf.score(X_low, y)
+    print "acc_hvy_pca: %.4f" % acc_hvy_pca
+
+    pca = None
+
+    # PPCA
+    ppca = PPCA(X_pure)
+    ppca.fit(d=n_rank)
+    X_low = ppca.transform(X_pure)
+    clf = SVC(C=C, kernel='linear')
+    clf.fit(X_low, y)
+    acc_pure_ppca = clf.score(X_low, y)
+    print "acc_pure_ppca: %.4f" % acc_pure_ppca
+
+    ppca = PPCA(X_sig)
+    ppca.fit(d=n_rank)
+    X_low = ppca.transform(X_sig)
+    clf = SVC(C=C, kernel='linear')
+    clf.fit(X_low, y)
+    acc_sig_ppca = clf.score(X_low, y)
+    print "acc_sig_ppca: %.4f" % acc_sig_ppca
+
+    ppca = PPCA(X_lit)
+    ppca.fit(d=n_rank)
+    X_low = ppca.transform(X_lit)
+    clf = SVC(C=C, kernel='linear')
+    clf.fit(X_low, y)
+    acc_lit_ppca = clf.score(X_low, y)
+    print "acc_lit_ppca: %.4f" % acc_lit_ppca
+
+    ppca = PPCA(X_hvy)
+    ppca.fit(d=n_rank)
+    X_low = ppca.transform(X_hvy)
+    clf = SVC(C=C, kernel='linear')
+    clf.fit(X_low, y)
+    acc_hvy_ppca = clf.score(X_low, y)
+    print "acc_hvy_ppca: %.4f" % acc_hvy_ppca
+
+    ## FA
+    fa = FactorAnalysis(n_components=n_rank)
+    fa.fit(X_pure)
+    X_low = fa.transform(X_pure)
+    clf = SVC(C=C, kernel='linear')
+    clf.fit(X_low, y)
+    acc_pure_fa = clf.score(X_low, y)
+    print "acc_pure_fa: %.4f" % acc_pure_fa
+
+    fa = FactorAnalysis(n_components=n_rank)
+    fa.fit(X_sig)
+    X_low = fa.transform(X_sig)
+    clf = SVC(C=C, kernel='linear')
+    clf.fit(X_low, y)
+    acc_sig_fa = clf.score(X_low, y)
+    print "acc_sig_fa: %.4f" % acc_sig_fa
+
+    fa = FactorAnalysis(n_components=n_rank)
+    fa.fit(X_lit)
+    X_low = fa.transform(X_lit)
+    clf = SVC(C=C, kernel='linear')
+    clf.fit(X_low, y)
+    acc_lit_fa = clf.score(X_low, y)
+    print "acc_lit_fa: %.4f" % acc_lit_fa
+
+    fa = FactorAnalysis(n_components=n_rank)
+    fa.fit(X_hvy)
+    X_low = fa.transform(X_hvy)
+    clf = SVC(C=C, kernel='linear')
+    clf.fit(X_low, y)
+    acc_hvy_fa = clf.score(X_low, y)
+    print "acc_hvy_fa: %.4f" % acc_hvy_fa
 
 
 def main():
     n = 10
-
     groups = 4
     N = np.arange(groups)
     vars_ppca = np.zeros([n, groups])
@@ -208,4 +389,4 @@ def main():
     plt.show()
 
 if __name__ == "__main__":
-    classification_sim()
+    test_spark()

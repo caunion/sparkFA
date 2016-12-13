@@ -661,7 +661,7 @@ class PCAUtils {
 			fileWriter.close();
 		}
 		catch (Exception e) {
-			Log.error("Output file " + outputPath + " not found ");
+			Log.error("Output file " + outputPath + " not found "  + e.getMessage());
 		}	
 	}
 	
@@ -698,7 +698,7 @@ class PCAUtils {
 			fileWriter.close();
 		}
 		catch (Exception e) {
-			Log.error("Output file " + outputPath + " not found ");
+			Log.error("Output file " + outputPath + " not found " + e.getMessage());
 		}
 	}
 	
@@ -724,7 +724,7 @@ class PCAUtils {
 			fileWriter.close();
 		}
 		catch (Exception e) {
-			Log.error("Output file " + outputPath + " not found ");
+			Log.error("Output file " + outputPath + " not found " + e.getMessage());
 		}
 	}
 	
