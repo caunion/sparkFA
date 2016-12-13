@@ -296,6 +296,8 @@ public class SparkPCA implements Serializable {
 		Matrix centralCFA;
 		double LL;
 		double LL2;
+		double LLChange;
+		double LLOld;
 
 		// The two PPCA variables that improve over each iteration: Principal component matrix (C) and random variance (ss).
 		// Initialized randomly for the first iteration
@@ -451,7 +453,7 @@ public class SparkPCA implements Serializable {
 		final int firstRound=round;
 
 		//for (; (round < maxIterations && relChangeInObjective > threshold && prevError > 0.02); round++) {
-		for (; (round < 20); round++) { //right now this is just doing 20 its of the EM algorithm. May want to add condition to break
+		for (; (round < maxIterations && LLChange < 1 && Double.isNaN(LLChange) != 1); round++) { //right now this is just doing 20 its of the EM algorithm. May want to add condition to break
 
 
 			// OLD sPCA code...Sx = inv( ss * eye(d) + CtC );
@@ -796,6 +798,8 @@ public class SparkPCA implements Serializable {
 			//LL = -nRows/2.0* Math.log(2* Math.PI) + nRows * li1 - nRows * 0.5 * li2; //correct and probably more efficient, but can cause numerical errors
 			//log-likelihood
 			LL2 = -nRows/2.0* Math.log(2* Math.PI) + nRows * 0.5 * Math.log(mInv.determinant()) - nRows * 0.5 * li2;
+			LLChange = LL2 - LLOld;
+			LLOld = LL2;
 
 
 
