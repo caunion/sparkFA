@@ -31,5 +31,5 @@ if [  $# -lt 1 ]
 master_url=$1  #master url has two options (local, spark://<IP>:7077) 
 SCRIPT=$(readlink -f $0) # Absolute path to this script.
 SCRIPTPATH=`dirname $SCRIPT` # Absolute path this script is in. /home/user/bin
-$SPARK_HOME/bin/spark-submit --class org.qcri.sparkpca.SparkPCA --master $master_url --driver-java-options "-Di=input/data_sig -Do=output -Drows=1000 -Dcols=7 -Dpcs=3 -DerrSampleRate=1 -DmaxIter=200" target/sparkPCA-1.0.jar
+$SPARK_HOME/bin/spark-submit --class org.qcri.sparkpca.SparkPCA --master $master_url --driver-java-options "-Di=input/big_data -Do=output -Drows=10000 -Dcols=80 -Dpcs=30 -DerrSampleRate=1 -DmaxIter=200 -DcomputeProjectedMatrix=0" target/sparkPCA-1.0.jar
 #$SPARK_HOME/bin/spark-submit --class org.qcri.sparkpca.SparkPCA --master $master_url target/sparkPCA-1.0.jar -i input/data_sig -o output -rows 1000 -cols 7 -pcs 3 -errSampleRate 1 -maxIter=200

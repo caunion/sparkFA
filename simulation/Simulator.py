@@ -82,8 +82,8 @@ def pca(data, dim):
     return variablity
 
 def generate_big_data():
-    shape =[50000, 250]
-    rank = 20
+    shape =[10000, 80]
+    rank = 30
     big_data, low_diff, noise_diff = gen(shape, rank, noise_type=2)
     np.savetxt("big_data.txt", big_data, fmt='%.6e')
 
@@ -389,4 +389,4 @@ def main():
     plt.show()
 
 if __name__ == "__main__":
-    test_spark()
+    generate_big_data()
