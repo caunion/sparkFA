@@ -126,6 +126,46 @@ def simulate():
     return var_pca, var_ppca
 
 
+def classification_sim(shape = [200, 10], n_rank=3, n_classes=4, noise_type = 0):
+    from sklearn.datasets import make_classification
+    from mpl_toolkits.mplot3d import Axes3D
+    from sklearn.utils import shuffle
+    from sklearn.utils import random
+    from sklearn.svm import SVC
+    n_sample, n_dim = shape
+    colors = ['r','g','b','y']
+    X, y = make_classification(n_samples=n_sample,n_features=n_rank, n_repeated=0, n_redundant=0,n_clusters_per_class=1, n_informative=n_rank, n_classes=n_classes, random_state=1)
+    # fig = plt.figure()
+    # ax =fig.add_subplot(111, projection='3d')
+    # # ax =fig.add_subplot(111)
+    # for i in range(n_classes):
+    #     I = (y == i)
+    #     x = X[I, :]
+    #     ax.scatter(x[:, 0], x[:, 1], x[:, 2], c=colors[i])
+    #     # ax.scatter(x[:, 0], x[:, 1], c=colors[i])
+    #
+    # ax.set_xlabel('X Label')
+    # ax.set_ylabel('Y Label')
+    # ax.set_zlabel('Z Label')
+    # plt.show()
+
+    clf = SVC(C=1)
+    clf.fit(X, y)
+    init_acc = clf.score(X, y)
+
+    noise = np.zeros([1, n_dim])
+    for i in range(n_sample):
+        pass
+    if noise_type == 1:
+        sigma = np.random.rand()
+        noise = np.random.randn([1, n_dim]) * sigma
+    if noise_type == 2:
+        sigma = np.random.rand([1, n_dim])
+        noise = np.random.randn([1, n_dim]) * sigma
+    if noise_type == 3:
+        sigma = np.random.rand([1, n_dim]) * sigma
+
+
 def main():
     n = 10
 
@@ -168,4 +208,4 @@ def main():
     plt.show()
 
 if __name__ == "__main__":
-    main()
+    classification_sim()
