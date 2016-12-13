@@ -296,6 +296,8 @@ public class SparkPCA implements Serializable {
 		Matrix centralCFA;
 		double LL;
 		double LL2;
+		double LLChange = 1e6;
+		double LLOld = -1e6;
 
 		// The two PPCA variables that improve over each iteration: Principal component matrix (C) and random variance (ss).
 		// Initialized randomly for the first iteration
@@ -385,12 +387,12 @@ public class SparkPCA implements Serializable {
 
 
 
-		//2. Frobenious Norm Job : Obtain Frobenius norm of the input RDD<org.apache.spark.mllib.linalg.Vector>
-		/**
+/*		//2. Frobenious Norm Job : Obtain Frobenius norm of the input RDD<org.apache.spark.mllib.linalg.Vector>
+		*//**
 		 * To compute the norm2 of a sparse matrix, iterate over sparse items and sum
 		 * square of the difference. After processing each row, add the sum of the
 		 * meanSquare of the zero-elements that were ignored in the sparse iteration.
-		 */
+		 *//*
 		double meanSquareSumTmp=0;
 		for(int i=0; i < br_ym_mahout.value().size(); i++)
 		{
@@ -432,13 +434,15 @@ public class SparkPCA implements Serializable {
 		log.info("NOOOOORM2=" + norm2 );
 
 		// initial CtC
-		Matrix centralCtC= centralC.transpose().times(centralC);
+		Matrix centralCtC= centralC.transpose().times(centralC);*/
 
+
+
+
+		// -------------------------- EM Iterations
 
 		Matrix centralY2X=null;
 		Matrix centralY2Xm = null;
-
-		// -------------------------- EM Iterations
 		// while count
 		int round = 0;
 		double prevObjective = Double.MAX_VALUE;
@@ -451,11 +455,14 @@ public class SparkPCA implements Serializable {
 		final int firstRound=round;
 
 		//for (; (round < maxIterations && relChangeInObjective > threshold && prevError > 0.02); round++) {
-		for (; (round < 20); round++) { //right now this is just doing 20 its of the EM algorithm. May want to add condition to break
+		//for (; (round < 20 && LLChange < 1 && Double.isNaN(LLChange) != true); round++) {
+			//right now this is just doing 20 its of the EM algorithm. May want to add condition to break
+		for (; (round < maxIterations && LLChange > 1); round++) { //right now this is just doing 20 its of the EM algorithm. May want to add condition to break
+
 
 
 			// OLD sPCA code...Sx = inv( ss * eye(d) + CtC );
-			Matrix centralSx = centralCtC.clone();
+			//Matrix centralSx = centralCtC.clone();
 
 			//inv(psi)
 			Matrix psiInv = psi.clone();
@@ -471,12 +478,12 @@ public class SparkPCA implements Serializable {
 
 			// ... OLD sPCA code...
 			//Sx = inv( eye(d) + CtC/ss );
-			centralSx.viewDiagonal().assign(Functions.plus(ss));
-			centralSx = PCAUtils.inv(centralSx);
+			//centralSx.viewDiagonal().assign(Functions.plus(ss));
+			//centralSx = PCAUtils.inv(centralSx);
 
 			// ... OLD sPCA code...
 			// X = Y * C * Sx' => Y2X = C * Sx'
-			centralY2X =centralC.times(centralSx.transpose());
+			//centralY2X =centralC.times(centralSx.transpose());
 
 
 
@@ -484,19 +491,19 @@ public class SparkPCA implements Serializable {
 			centralY2Xm = centralCFA.transpose().times(mInv);
 
 			//Broadcast Y2X because it will be used in several jobs and several iterations.
-			final Broadcast<Matrix> br_centralY2X = sc.broadcast(centralY2X); //old sPCA code
+			//final Broadcast<Matrix> br_centralY2X = sc.broadcast(centralY2X); //old sPCA code
 			final Broadcast<Matrix> br_centralY2Xm = sc.broadcast(centralY2Xm.transpose());
 
 			// Xm = Ym * Y2X
-			Vector xm_mahout = new DenseVector(nPCs); //old sPCA code
+			//Vector xm_mahout = new DenseVector(nPCs); //old sPCA code
 			Vector xmFA_mahout = new DenseVector(nPCs);
 
-			xm_mahout = PCAUtils.denseVectorTimesMatrix(br_ym_mahout.value(), centralY2X, xm_mahout); //old sPCA code
+			//xm_mahout = PCAUtils.denseVectorTimesMatrix(br_ym_mahout.value(), centralY2X, xm_mahout); //old sPCA code
 
 			xmFA_mahout = PCAUtils.denseVectorTimesMatrix(br_ym_mahout.value(),centralY2Xm.transpose(),xmFA_mahout);
 
 			//Broadcast Xm because it will be used in several iterations.
-			final Broadcast<Vector> br_xm_mahout = sc.broadcast(xm_mahout);//old sPCA code
+			//final Broadcast<Vector> br_xm_mahout = sc.broadcast(xm_mahout);//old sPCA code
 
 			final Broadcast <Vector> br_xmFA_mahout = sc.broadcast(xmFA_mahout);
 
@@ -524,9 +531,9 @@ public class SparkPCA implements Serializable {
 			 * YtX = (Y - Ym)' * (X - Xm)
 			 *
 			 */
-			final Accumulator<double[][]> matrixAccumXtx = sc.accumulator(new double[nPCs][nPCs], new MatrixAccumulatorParam()); //old sPCA code
-			final Accumulator<double[][]> matrixAccumYtx = sc.accumulator(new double[nCols][nPCs], new MatrixAccumulatorParam()); //old sPCA code
-			final Accumulator<double[]> matrixAccumX = sc.accumulator(new double[nPCs], new VectorAccumulatorParam()); //old sPCA code
+			//final Accumulator<double[][]> matrixAccumXtx = sc.accumulator(new double[nPCs][nPCs], new MatrixAccumulatorParam()); //old sPCA code
+			//final Accumulator<double[][]> matrixAccumYtx = sc.accumulator(new double[nCols][nPCs], new MatrixAccumulatorParam()); //old sPCA code
+			//final Accumulator<double[]> matrixAccumX = sc.accumulator(new double[nPCs], new VectorAccumulatorParam()); //old sPCA code
 
 			final Accumulator <double [][]> matrixAccumSigmaXm = sc.accumulator(new double[nPCs][nPCs], new MatrixAccumulatorParam());
 			final Accumulator<double[][]> matrixAccumYProj = sc.accumulator(new double[nCols][nPCs], new MatrixAccumulatorParam());
@@ -540,9 +547,9 @@ public class SparkPCA implements Serializable {
 		     * Initialize the output matrices and vectors once in order to avoid generating massive intermediate data in the workers
 		     */
 			//old sPCA code (next 3 lines)
-			final double[][] resArrayYtX = new double[nCols][nPCs];
-			final double[][] resArrayXtX = new double[nPCs][nPCs];
-			final double[]   resArrayX = new double[nPCs];
+			//final double[][] resArrayYtX = new double[nCols][nPCs];
+			//final double[][] resArrayXtX = new double[nPCs][nPCs];
+			//final double[]   resArrayX = new double[nPCs];
 
 			final double[][] resArrayYproj = new double[nCols][nPCs];
 			final double[][] resArraySigmaXm = new double[nPCs][nPCs];
@@ -552,9 +559,9 @@ public class SparkPCA implements Serializable {
 		     * Used to sum the vectors in one partition.
 		    */
 			//old sPCA code (next 3 lines)
-			final double[][] internalSumYtX = new double[nCols][nPCs];
-			final double[][]   internalSumXtX = new double[nPCs][nPCs];
-			final double[]   internalSumX = new double[nPCs];
+			//final double[][] internalSumYtX = new double[nCols][nPCs];
+			//final double[][]   internalSumXtX = new double[nPCs][nPCs];
+			//final double[]   internalSumX = new double[nPCs];
 
 			final double[][] internalSumYProj= new double[nCols][nPCs];
 			final double[][] internalSumSigmaXm = new double[nPCs][nPCs];
@@ -571,7 +578,7 @@ public class SparkPCA implements Serializable {
 		    			/*
 		    		     * Perform in-memory matrix multiplication xi = yi' * Y2X
 		    		    */
-						PCAUtils.sparseVectorTimesMatrix(yi,br_centralY2X.value(), resArrayX); //old sPCA code
+						//PCAUtils.sparseVectorTimesMatrix(yi,br_centralY2X.value(), resArrayX); //old sPCA code
 
 						PCAUtils.sparseVectorTimesMatrix(yi,br_centralY2Xm.value(), resArrayX_FA);
 
@@ -579,8 +586,8 @@ public class SparkPCA implements Serializable {
 						int[] indices=((SparseVector)yi).indices();
 
 						//old sPCA code (next 2 lines)
-						PCAUtils.outerProductWithIndices(yi, br_ym_mahout.value(), resArrayX, br_xm_mahout.value(), resArrayYtX,indices);
-						PCAUtils.outerProductArrayInput(resArrayX, br_xm_mahout.value(), resArrayX, br_xm_mahout.value(), resArrayXtX);
+						//PCAUtils.outerProductWithIndices(yi, br_ym_mahout.value(), resArrayX, br_xm_mahout.value(), resArrayYtX,indices);
+						//PCAUtils.outerProductArrayInput(resArrayX, br_xm_mahout.value(), resArrayX, br_xm_mahout.value(), resArrayXtX);
 
 						PCAUtils.outerProductWithIndices(yi, br_ym_mahout.value(), resArrayX_FA, br_xmFA_mahout.value(), resArrayYproj, indices);
 						PCAUtils.outerProductArrayInput(resArrayX_FA, br_xmFA_mahout.value(), resArrayX_FA, br_xmFA_mahout.value(), resArraySigmaXm);
@@ -594,8 +601,8 @@ public class SparkPCA implements Serializable {
 							for(j=0; j< nPCs; j++ )
 							{
 								//old sPCA code (next 2 lines)
-								internalSumYtX[rowIndexYtX][j]+=resArrayYtX[rowIndexYtX][j];
-								resArrayYtX[rowIndexYtX][j]=0; //reset it
+								//internalSumYtX[rowIndexYtX][j]+=resArrayYtX[rowIndexYtX][j];
+								//resArrayYtX[rowIndexYtX][j]=0; //reset it
 
 								internalSumYProj[rowIndexYtX][j]+=resArrayYproj[rowIndexYtX][j];
 								resArrayYproj[rowIndexYtX][j] = 0;
@@ -604,12 +611,12 @@ public class SparkPCA implements Serializable {
 						}
 						for(i=0; i< nPCs; i++ )
 						{
-							internalSumX[i]+=resArrayX[i];
+							//internalSumX[i]+=resArrayX[i];
 							for(j=0; j< nPCs; j++ )
 							{
 								//old sPCA code (next 2 lines)
-								internalSumXtX[i][j]+=resArrayXtX[i][j];
-								resArrayXtX[i][j]=0; //reset it
+								//internalSumXtX[i][j]+=resArrayXtX[i][j];
+								//resArrayXtX[i][j]=0; //reset it
 
 								internalSumSigmaXm[i][j]+=resArraySigmaXm[i][j];
 								resArraySigmaXm[i][j]=0;
@@ -618,9 +625,9 @@ public class SparkPCA implements Serializable {
 						}
 					}
 					//old sPCA code (next 3 lines)
-					matrixAccumX.add(internalSumX);
-					matrixAccumXtx.add(internalSumXtX);
-					matrixAccumYtx.add(internalSumYtX);
+					//matrixAccumX.add(internalSumX);
+					//matrixAccumXtx.add(internalSumXtX);
+					//matrixAccumYtx.add(internalSumYtX);
 
 					matrixAccumX_FA.add(internalSumX_FA);
 					matrixAccumSigmaXm.add(internalSumSigmaXm);
@@ -634,9 +641,9 @@ public class SparkPCA implements Serializable {
 		    * Get the values of the accumulators.
 		   */
 			//old sPCA code (next 3 lines)
-			Matrix centralYtX = new DenseMatrix(matrixAccumYtx.value());
-			Matrix centralXtX = new DenseMatrix(matrixAccumXtx.value());
-			Vector centralSumX= new DenseVector(matrixAccumX.value());
+			//Matrix centralYtX = new DenseMatrix(matrixAccumYtx.value());
+			//Matrix centralXtX = new DenseMatrix(matrixAccumXtx.value());
+			//Vector centralSumX= new DenseVector(matrixAccumX.value());
 
 			Matrix centralYProj = new DenseMatrix(matrixAccumYProj.value());
 			Matrix centralSigmaXm = new DenseMatrix(matrixAccumSigmaXm.value());
@@ -651,21 +658,21 @@ public class SparkPCA implements Serializable {
 	        * The first part is done in the previous job and the second in the following method
 	       */
 			//old sPCA code and I don't even know what this does...I don't replicate it.
-			centralYtX= PCAUtils.updateXtXAndYtx(centralYtX, centralSumX, br_ym_mahout.value(), xm_mahout, nRows);
-			centralXtX= PCAUtils.updateXtXAndYtx(centralXtX, centralSumX, xm_mahout, xm_mahout, nRows);
+			//centralYtX= PCAUtils.updateXtXAndYtx(centralYtX, centralSumX, br_ym_mahout.value(), xm_mahout, nRows);
+			//centralXtX= PCAUtils.updateXtXAndYtx(centralXtX, centralSumX, xm_mahout, xm_mahout, nRows);
 
 			//need to scale outerproduct results by number of elements
 			centralYProj = centralYProj.times(1.0/(float) nRows);
 			centralSigmaXm = centralSigmaXm.times(1.0/(float) nRows);
 
-			// OLD sPCA code....XtX = X'*X + ss * Sx
+/*			// OLD sPCA code....XtX = X'*X + ss * Sx
 			final double finalss = ss;
 			centralXtX.assign(centralSx, new DoubleDoubleFunction() {
 				@Override
 				public double apply(double arg1, double arg2) {
 					return arg1 + finalss * arg2;
 				}
-			});
+			});*/
 
 
 			centralSigmaXm.viewDiagonal().assign(Functions.plus(1));
@@ -673,9 +680,9 @@ public class SparkPCA implements Serializable {
 
 
 			// OLD spCA Code, next 3 lines...C = (Ye'*X) / SumXtX;
-			Matrix invXtX_central = PCAUtils.inv(centralXtX);
-			centralC = centralYtX.times(invXtX_central);
-			centralCtC = centralC.transpose().times(centralC);
+			//Matrix invXtX_central = PCAUtils.inv(centralXtX);
+			//centralC = centralYtX.times(invXtX_central);
+			//centralCtC = centralC.transpose().times(centralC);
 
 
 			Matrix invSigmaXm = PCAUtils.inv(centralSigmaXm); //might be a way to make this stuff more efficient...
@@ -685,8 +692,8 @@ public class SparkPCA implements Serializable {
 			// Compute new value for ss
 			// ss = ( sum(sum(Ye.^2)) + trace(XtX*CtC) - 2sum(XiCtYit))/(N*D);
 
-			//4. Variance Job: Computes part of variance that requires a distributed job
-			/**
+			/*//4. Variance Job: Computes part of variance that requires a distributed job
+			*//**
 			 * xcty = Sum (xi * C' * yi')
 			 *
 			 * We also regenerate xi on demand by the following formula:
@@ -700,7 +707,7 @@ public class SparkPCA implements Serializable {
 			 *
 			 * xi * C' * (yi-ym)' = xi * ((yi-ym)*C)' = xi * (yi*C - ym*C)'
 			 *
-			 */
+			 *//*
 
 			double ss2 = PCAUtils.trace(centralXtX.times(centralCtC));
 			final double[] resArrayYmC = new double[centralC.numCols()];
@@ -739,7 +746,7 @@ public class SparkPCA implements Serializable {
 			}); //end Variance Job
 
 			double xctyt = doubleAccumXctyt.value();
-			double CXYt = doubleAccumCXYt.value();
+			double CXYt = doubleAccumCXYt.value();*/
 
 
 
@@ -749,7 +756,7 @@ public class SparkPCA implements Serializable {
 
 			psi.viewDiagonal().assign(YCov.viewDiagonal().assign(psiProj.viewDiagonal(),Functions.MINUS));
 			psi = psi.divide(nRows); //M Step: new psi calc
-			System.out.print(psi);
+			//System.out.print(psi);
 
 			//prevents the numerical error that arises later from taking inv(0) for sparse matrices
 			for(int iYCov = 0; iYCov<psi.numRows(); iYCov++){
@@ -758,7 +765,7 @@ public class SparkPCA implements Serializable {
 				}
 			}
 
-			System.out.print(psi);
+			//System.out.print(psi);
 
 
 		/*//Compute likelihood
@@ -796,6 +803,11 @@ public class SparkPCA implements Serializable {
 			//LL = -nRows/2.0* Math.log(2* Math.PI) + nRows * li1 - nRows * 0.5 * li2; //correct and probably more efficient, but can cause numerical errors
 			//log-likelihood
 			LL2 = -nRows/2.0* Math.log(2* Math.PI) + nRows * 0.5 * Math.log(mInv.determinant()) - nRows * 0.5 * li2;
+			LLChange = LL2 - LLOld;
+			LLOld = LL2;
+
+			log.info("...............LOG LIKELIHOOD: " + LL2);
+			System.out.println("...............LOG LIKELIHOOD: " + LL2);
 
 
 
@@ -804,28 +816,28 @@ public class SparkPCA implements Serializable {
 
 
 
-			ss = (norm2 + ss2 - 2 * xctyt) / (nRows * nCols);
-			log.info("SSSSSSSSSSSSSSSSSSSSSSSSSSSS " + ss + " (" + norm2 + " + "
-					+ ss2 + " -2* " + xctyt);
+			//ss = (norm2 + ss2 - 2 * xctyt) / (nRows * nCols);
+			//log.info("SSSSSSSSSSSSSSSSSSSSSSSSSSSS " + ss + " (" + norm2 + " + "
+					//+ ss2 + " -2* " + xctyt);
 
 
-			double objective = ss;
-			relChangeInObjective = Math.abs(1 - objective / prevObjective);
-			prevObjective = objective;
-			log.info("Objective:  %.6f    relative change: %.6f \n", objective,
-					relChangeInObjective);
+			//double objective = ss;
+			//relChangeInObjective = Math.abs(1 - objective / prevObjective);
+			//prevObjective = objective;
+			//log.info("Objective:  %.6f    relative change: %.6f \n", objective,
+					//relChangeInObjective);
 
 
 			if (!CALCULATE_ERR_ATTHEEND) {
 				log.info("Computing the error at round " + round + " ...");
 				System.out.println("Computing the error at round " + round + " ...");
 
-				double[] resArrayZmTmp = new double[centralC.numRows()];
+				//double[] resArrayZmTmp = new double[centralC.numRows()];
 
 				double [] resArrayZmTmp_FA = new double[centralCFA.numRows()];
 
-				PCAUtils.vectorTimesMatrixTranspose(xm_mahout, centralC, resArrayZmTmp);
-				final double[] resArrayZm= PCAUtils.subtractVectorArray(resArrayZmTmp , meanVector);
+				//PCAUtils.vectorTimesMatrixTranspose(xm_mahout, centralC, resArrayZmTmp);
+				//final double[] resArrayZm= PCAUtils.subtractVectorArray(resArrayZmTmp , meanVector);
 
 				PCAUtils.vectorTimesMatrixTranspose(xmFA_mahout, centralCFA, resArrayZmTmp_FA);
 				final double[] resArrayZm_FA= PCAUtils.subtractVectorArray(resArrayZmTmp_FA, meanVector);
@@ -851,32 +863,35 @@ public class SparkPCA implements Serializable {
 				 *
 				 */
 
-				final Accumulator<double[]> vectorAccumErr = sc.accumulator(new double[nCols], new VectorAccumulatorAbsParam());
-				final Accumulator<double[]> vectorAccumNormCentralized = sc.accumulator(new double[nCols], new VectorAccumulatorAbsParam());
+				//final Accumulator<double[]> vectorAccumErr = sc.accumulator(new double[nCols], new VectorAccumulatorAbsParam());
+				//final Accumulator<double[]> vectorAccumNormCentralized = sc.accumulator(new double[nCols], new VectorAccumulatorAbsParam());
 
 				final Accumulator<double[]> vectorAccumErr_FA = sc.accumulator(new double[nCols],new VectorAccumulatorAbsParam());
 				final Accumulator<double[]> vectorAccumNormCentralized_FA = sc.accumulator(new double[nCols], new VectorAccumulatorParam());
 
-				final double[] xiCtArray = new double[centralC.numRows()];
-				final double[] normalizedArray = new double[nCols];
+				//final double[] xiCtArray = new double[centralC.numRows()];
+				//final double[] normalizedArray = new double[nCols];
 
 				final double[] xiCtArray_FA = new double[centralCFA.numRows()];
 				final double [] normalizedArray_FA = new double[nCols];
+
+				final Broadcast<Matrix> br_centralCFA = sc.broadcast(centralCFA);
+
 
 				vectors.foreach( new VoidFunction<org.apache.spark.mllib.linalg.Vector>() {
 					public void call(org.apache.spark.mllib.linalg.Vector yi) throws Exception {
 						if (PCAUtils.pass(errRate))
 							return;
 
-						PCAUtils.sparseVectorTimesMatrix(yi, br_centralY2X.value(), resArrayX);
-						PCAUtils.vectorTimesMatrixTranspose(resArrayX, br_centralC.value(), xiCtArray);
+						//PCAUtils.sparseVectorTimesMatrix(yi, br_centralY2X.value(), resArrayX);
+						//PCAUtils.vectorTimesMatrixTranspose(resArrayX, br_centralC.value(), xiCtArray);
 
 
 						PCAUtils.sparseVectorTimesMatrix(yi, br_centralY2Xm.value(), resArrayX_FA);
 						PCAUtils.vectorTimesMatrixTranspose(resArrayX_FA, br_centralCFA.value(), xiCtArray_FA);
 
-						PCAUtils.denseVectorSubtractSparseSubtractDense(xiCtArray,yi,resArrayZm);
-						vectorAccumErr.add(xiCtArray);
+						//PCAUtils.denseVectorSubtractSparseSubtractDense(xiCtArray,yi,resArrayZm);
+						//vectorAccumErr.add(xiCtArray);
 
 						PCAUtils.denseVectorSubtractSparseSubtractDense(xiCtArray_FA,yi,resArrayZm_FA);
 						vectorAccumErr_FA.add(xiCtArray_FA);
@@ -889,8 +904,8 @@ public class SparkPCA implements Serializable {
 		          /*
 		           * The norm of the reconstruction error matrix
 		           */
-				double reconstructionError= PCAUtils.getMax(vectorAccumErr.value());
-				log.info("************************ReconsructionError=" + reconstructionError );
+				//double reconstructionError= PCAUtils.getMax(vectorAccumErr.value());
+				//log.info("************************ReconsructionError=" + reconstructionError );
 
 				double reconstructionError_FA= PCAUtils.getMax(vectorAccumErr_FA.value());
 				log.info("************************ReconsructionError FA=" + reconstructionError_FA );
@@ -898,19 +913,19 @@ public class SparkPCA implements Serializable {
 		          /*
 		           * The norm of the input matrix after centralization
 		          */
-				double centralizedYNorm= PCAUtils.getMax(vectorAccumNormCentralized.value());
-				log.info("************************CentralizedNOrm=" + centralizedYNorm );
+				//double centralizedYNorm= PCAUtils.getMax(vectorAccumNormCentralized.value());
+				//log.info("************************CentralizedNOrm=" + centralizedYNorm );
 
 				double centralizedYNorm_FA= PCAUtils.getMax(vectorAccumNormCentralized_FA.value());
 				log.info("************************CentralizedNOrm FA=" + centralizedYNorm_FA );
 
-				error = reconstructionError/centralizedYNorm;
-				log.info("... end of computing the error at round " + round + " And error=" + error);
+				//error = reconstructionError/centralizedYNorm;
+				//log.info("... end of computing the error at round " + round + " And error=" + error);
 
 				error_FA = reconstructionError_FA/centralizedYNorm_FA;
 				log.info("... FA end of computing the error at round " + round + " And FA error=" + error_FA);
 
-				prevError=error;
+				//prevError=error;
 				prevError_FA=error_FA;
 			}
 		}
