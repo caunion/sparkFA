@@ -14,7 +14,6 @@ import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Iterator;
 
-import com.sun.javafx.stage.FocusUngrabEvent;
 import org.apache.commons.cli.*;
 import org.apache.hadoop.hdfs.server.common.Storage.StorageState;
 import org.apache.hadoop.io.IntWritable;
