@@ -155,6 +155,7 @@ def classification_sim(shape = [200, 10], n_rank=3, n_classes=4, noise_type = 0)
 
     noise = np.zeros([1, n_dim])
     for i in range(n_sample):
+        pass
     if noise_type == 1:
         sigma = np.random.rand()
         noise = np.random.randn([1, n_dim]) * sigma
@@ -162,7 +163,7 @@ def classification_sim(shape = [200, 10], n_rank=3, n_classes=4, noise_type = 0)
         sigma = np.random.rand([1, n_dim])
         noise = np.random.randn([1, n_dim]) * sigma
     if noise_type == 3:
-        sigma = np.random.rand([1, n_dim]) *
+        sigma = np.random.rand([1, n_dim]) * sigma
 
 
 def main():
