@@ -917,7 +917,7 @@ public class SparkPCA implements Serializable {
 		if(computeProjectedMatrix==1)
 		{
 			//7. Compute Projected Matrix Job: The job multiplies the input matrix Y with the principal components C to get the Projected vectors
-			final Broadcast<Matrix> br_centralC = sc.broadcast(centralC);
+			final Broadcast<Matrix> br_centralC = sc.broadcast(centralCFA);
 			JavaRDD<org.apache.spark.mllib.linalg.Vector> projectedVectors=vectors.map(new Function<org.apache.spark.mllib.linalg.Vector, org.apache.spark.mllib.linalg.Vector>() {
 
 				public org.apache.spark.mllib.linalg.Vector call(
@@ -929,6 +929,8 @@ public class SparkPCA implements Serializable {
 			String path=outputPath+ File.separator + "ProjectedMatrix";
 			projectedVectors.saveAsTextFile(path);
 		}
+
+
 		return PCAUtils.convertMahoutToSparkMatrix(centralCFA); //was centralC
 
 	}
