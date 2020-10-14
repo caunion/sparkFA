@@ -83,7 +83,8 @@ def pca(data, dim):
 
 def generate_big_data():
     shape =[10000, 80]
-    rank = 30
+    # rank = 30
+    rank = 20
     big_data, low_diff, noise_diff = gen(shape, rank, noise_type=2)
     np.savetxt("big_data.txt", big_data, fmt='%.6e')
 
